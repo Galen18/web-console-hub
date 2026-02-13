@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>Terminal</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      background: #0a0a1a;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #111127;
+      border-bottom: 1px solid #2a2a4a;
+      height: 44px;
+    }
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-back {
+      background: none;
+      border: none;
+      color: #60a5fa;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .toolbar-title {
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-running { background: #22c55e; }
+    .status-waiting { background: #eab308; }
+    .status-idle { background: #9ca3af; }
+    .status-error { background: #ef4444; }
+
+    .terminal-frame {
+      flex: 1;
+      width: 100%;
+      border: none;
+    }
+    .terminal-container {
+      display: flex;
+      flex-direction: column;
+      height: calc(100% - 44px);
+    }
+
+    .shortcut-bar {
+      display: flex;
+      gap: 4px;
+      padding: 6px 8px;
+      background: #111127;
+      border-top: 1px solid #2a2a4a;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .shortcut-btn {
+      background: #1e1e3a;
+      border: 1px solid #3a3a5a;
+      color: #bbb;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      white-space: nowrap;
+      cursor: pointer;
+      min-height: 36px;
+    }
+    .shortcut-btn:active { background: #2a2a5a; }
+
+    .input-bar {
+      display: flex;
+      gap: 6px;
+      padding: 8px;
+      background: #111127;
+      border-top: 1px solid #2a2a4a;
+    }
+    .input-bar input {
+      flex: 1;
+      background: #1a1a2e;
+      border: 1px solid #3a3a5a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e0e0e0;
+      font-size: 16px;
+      outline: none;
+    }
+    .input-bar input:focus { border-color: #d97706; }
+    .btn-send {
+      background: #d97706;
+      border: none;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      min-width: 48px;
+    }
+    .btn-send:active { background: #b45309; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="btn-back" onclick="goBack()">&#8592;</button>
+      <span class="toolbar-title" id="title">Loading...</span>
+    </div>
+    <span class="status-dot" id="status-dot"></span>
+  </div>
+
+  <div class="terminal-container">
+    <iframe id="terminal-frame" class="terminal-frame" src="about:blank"></iframe>
+
+    <div class="shortcut-bar" id="shortcut-bar">
+      <button class="shortcut-btn" onclick="sendKey('Tab')">Tab</button>
+      <button class="shortcut-btn" onclick="sendKey('Up')">&#8593;</button>
+      <button class="shortcut-btn" onclick="sendKey('Down')">&#8595;</button>
+      <button class="shortcut-btn" onclick="sendKey('C-c')">Ctrl+C</button>
+      <button class="shortcut-btn" onclick="sendKey('Enter')">Enter</button>
+      <button class="shortcut-btn" onclick="sendKey('Escape')">Esc</button>
+      <button class="shortcut-btn" onclick="sendKey('C-l')">Clear</button>
+      <button class="shortcut-btn" onclick="sendKey('C-r')">Search</button>
+    </div>
+
+    <div class="input-bar">
+      <input type="text" id="cmd-input" placeholder="Type command..." autocomplete="off" autocorrect="off" autocapitalize="off">
+      <button class="btn-send" onclick="sendInput()">&#9654;</button>
+    </div>
+  </div>
+
+  <script>
+    var sessionId = window.location.pathname.split('/').pop();
+    // Change this to match your reverse proxy path prefix
+    var BASE = '/console';
+
+    document.getElementById('title').textContent = sessionId;
+
+    // Load ttyd terminal in iframe
+    document.getElementById('terminal-frame').src = BASE + '/t/' + sessionId + '/';
+
+    function api(method, path, body) {
+      var opts = { method: method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      return fetch(path, opts).then(function(res) { return res.json(); });
+    }
+
+    function sendInput() {
+      var input = document.getElementById('cmd-input');
+      var text = input.value;
+      api('POST', BASE + '/api/sessions/' + sessionId + '/input', { text: text });
+      input.value = '';
+      input.focus();
+    }
+
+    function sendKey(key) {
+      api('POST', BASE + '/api/sessions/' + sessionId + '/key', { key: key });
+    }
+
+    function goBack() {
+      window.location.href = BASE + '/';
+    }
+
+    // Enter key sends input
+    document.getElementById('cmd-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendInput();
+      }
+    });
+
+    // SSE for status updates
+    var es = new EventSource(BASE + '/api/sessions/stream');
+    es.onmessage = function(e) {
+      try {
+        var data = JSON.parse(e.data);
+        for (var i = 0; i < data.sessions.length; i++) {
+          if (data.sessions[i].id === sessionId) {
+            var dot = document.getElementById('status-dot');
+            dot.className = 'status-dot status-' + data.sessions[i].status;
+          }
+        }
+      } catch(err) {}
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "claude": {
+    "name": "Claude CLI",
+    "command": "claude",
+    "icon": "circle-c",
+    "color": "#d97706"
+  }
+}

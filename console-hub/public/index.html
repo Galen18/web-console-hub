@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Golden Tide Console</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 16px;
+      padding-bottom: 100px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #2a2a4a;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 20px;
+      color: #d97706;
+      font-weight: 600;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      min-height: 48px;
+      transition: background 0.2s;
+    }
+    .btn-primary {
+      background: #d97706;
+      color: #fff;
+      width: 100%;
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+    .btn-primary:hover { background: #b45309; }
+    .btn-primary:active { background: #92400e; }
+    .btn-danger {
+      background: transparent;
+      color: #ef4444;
+      padding: 8px;
+      min-height: 36px;
+      font-size: 20px;
+    }
+    .btn-connect {
+      background: #1e3a5f;
+      color: #60a5fa;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .btn-connect:hover { background: #1e4078; }
+
+    .card {
+      background: #111127;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-time {
+      font-size: 12px;
+      color: #888;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .status-running { background: #22c55e; }
+    .status-waiting { background: #eab308; animation: pulse 1.5s ease-in-out infinite; }
+    .status-idle { background: #9ca3af; }
+    .status-error { background: #ef4444; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .preview {
+      background: #0d0d1a;
+      padding: 8px 12px;
+      font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #a0e0a0;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 280px;
+      overflow-y: auto;
+      display: none;
+    }
+    .preview.open { display: block; }
+
+    .card-actions {
+      padding: 0 12px 12px;
+    }
+
+    .gdrive-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #111127;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    .gdrive-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .gdrive-status {
+      font-size: 13px;
+      color: #888;
+    }
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 13px;
+      min-height: 32px;
+      border-radius: 6px;
+    }
+    .btn-mount { background: #1e3a5f; color: #60a5fa; }
+    .btn-unmount { background: #3b1818; color: #f87171; }
+
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+    .empty p { margin-top: 8px; }
+
+    .notify-banner {
+      background: #1e3a5f;
+      border: 1px solid #2a4a7a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .notify-banner.hidden { display: none; }
+    .btn-notify {
+      background: #d97706;
+      color: #fff;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Golden Tide Console</h1>
+  </div>
+
+  <div id="notify-banner" class="notify-banner hidden">
+    <span>Enable notifications to get alerted when tasks complete</span>
+    <button class="btn btn-sm btn-notify" onclick="enablePush()">Enable</button>
+  </div>
+
+  <div class="gdrive-bar">
+    <div class="gdrive-label">
+      <span>&#128193;</span>
+      <span>Google Drive</span>
+      <span id="gdrive-status" class="gdrive-status">...</span>
+    </div>
+    <button id="gdrive-btn" class="btn btn-sm" onclick="toggleGDrive()">...</button>
+  </div>
+
+  <button class="btn btn-primary" onclick="createSession()">+ New Claude Session</button>
+
+  <div id="sessions"></div>
+
+  <script>
+    // Change this to match your reverse proxy path prefix.
+    // If served at https://example.com/console/ → set to '/console'
+    // If served at root https://example.com/ → set to ''
+    var BASE = '/console';
+    var sessionsData = [];
+
+    function api(method, path, body) {
+      var opts = { method: method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      return fetch(BASE + path, opts).then(function(res) { return res.json(); });
+    }
+
+    function loadSessions() {
+      api('GET', '/api/sessions').then(function(data) {
+        sessionsData = data;
+        renderSessions();
+      });
+    }
+
+    function renderSessions() {
+      var container = document.getElementById('sessions');
+      if (!sessionsData || sessionsData.length === 0) {
+        container.innerHTML = '<div class="empty"><div style="font-size:48px">&#128421;</div><p>No sessions yet - click the button above to create one</p></div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < sessionsData.length; i++) {
+        var s = sessionsData[i];
+        var statusClass = 'status-' + s.status;
+        var labels = { running: 'Running', waiting: 'Waiting', idle: 'Idle', error: 'Error' };
+        var statusLabel = labels[s.status] || s.status;
+        var timeAgo = getTimeAgo(s.created);
+        var preview = escapeHtml(s.preview || '');
+        html += '<div class="card" data-id="' + s.id + '">'
+          + '<div class="card-header" onclick="togglePreview(\'' + s.id + '\')">'
+          + '<div class="card-title">'
+          + '<span class="status-dot ' + statusClass + '"></span>'
+          + '<span>' + s.id + '</span>'
+          + '</div>'
+          + '<div class="card-meta">'
+          + '<span class="card-time">' + timeAgo + ' &middot; ' + statusLabel + '</span>'
+          + '<button class="btn btn-danger" onclick="event.stopPropagation(); deleteSession(\'' + s.id + '\')">&#215;</button>'
+          + '</div></div>'
+          + '<div class="preview" id="preview-' + s.id + '">' + preview + '</div>'
+          + '<div class="card-actions">'
+          + '<button class="btn btn-connect" onclick="openTerminal(\'' + s.id + '\')">Connect Session</button>'
+          + '</div></div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function togglePreview(id) {
+      var el = document.getElementById('preview-' + id);
+      if (el) el.classList.toggle('open');
+    }
+
+    function createSession() {
+      api('POST', '/api/sessions', { cli: 'claude' }).then(function() {
+        loadSessions();
+      }).catch(function(e) {
+        alert('Failed: ' + e.message);
+      });
+    }
+
+    function deleteSession(id) {
+      if (!confirm('Delete session ' + id + '?')) return;
+      api('DELETE', '/api/sessions/' + id).then(function() {
+        loadSessions();
+      });
+    }
+
+    function openTerminal(id) {
+      window.location.href = BASE + '/terminal/' + id;
+    }
+
+    function connectSSE() {
+      var es = new EventSource(BASE + '/api/sessions/stream');
+      es.onmessage = function(e) {
+        try {
+          var data = JSON.parse(e.data);
+          sessionsData = data.sessions;
+          renderSessions();
+        } catch(err) {}
+      };
+      es.onerror = function() {
+        es.close();
+        setTimeout(connectSSE, 5000);
+      };
+    }
+
+    function loadGDriveStatus() {
+      api('GET', '/api/gdrive/status').then(function(st) {
+        var statusEl = document.getElementById('gdrive-status');
+        var btnEl = document.getElementById('gdrive-btn');
+        if (st.mounted) {
+          statusEl.textContent = 'Mounted';
+          statusEl.style.color = '#22c55e';
+          btnEl.textContent = 'Unmount';
+          btnEl.className = 'btn btn-sm btn-unmount';
+        } else {
+          statusEl.textContent = 'Not mounted';
+          statusEl.style.color = '#888';
+          btnEl.textContent = 'Mount';
+          btnEl.className = 'btn btn-sm btn-mount';
+        }
+      });
+    }
+
+    function toggleGDrive() {
+      api('GET', '/api/gdrive/status').then(function(st) {
+        if (st.mounted) {
+          return api('POST', '/api/gdrive/unmount');
+        } else {
+          return api('POST', '/api/gdrive/mount');
+        }
+      }).then(function() {
+        loadGDriveStatus();
+      });
+    }
+
+    function enablePush() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      navigator.serviceWorker.register(BASE + '/sw.js').then(function(reg) {
+        return api('GET', '/api/push/vapid-key').then(function(keyRes) {
+          return reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(keyRes.publicKey)
+          });
+        });
+      }).then(function(sub) {
+        return api('POST', '/api/push/subscribe', sub.toJSON());
+      }).then(function() {
+        document.getElementById('notify-banner').classList.add('hidden');
+      }).catch(function(e) {
+        console.error('Push subscription failed:', e);
+      });
+    }
+
+    function checkPushSupport() {
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        navigator.serviceWorker.register(BASE + '/sw.js').then(function(reg) {
+          reg.pushManager.getSubscription().then(function(sub) {
+            if (!sub) {
+              document.getElementById('notify-banner').classList.remove('hidden');
+            }
+          });
+        });
+      }
+    }
+
+    function getTimeAgo(iso) {
+      var diff = Date.now() - new Date(iso).getTime();
+      var mins = Math.floor(diff / 60000);
+      if (mins < 1) return 'now';
+      if (mins < 60) return mins + 'm';
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h';
+      return Math.floor(hrs / 24) + 'd';
+    }
+
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      var padding = '='.repeat((4 - base64String.length % 4) % 4);
+      var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      var raw = atob(base64);
+      var arr = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+      return arr;
+    }
+
+    loadSessions();
+    loadGDriveStatus();
+    connectSSE();
+    checkPushSupport();
+  </script>
+</body>
+</html>
