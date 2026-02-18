@@ -1,3 +1,12 @@
 node_modules/
 console-hub/data/*.json
 nginx/.htpasswd
+
+# Private local files (never push to GitHub)
+_local/
+
+# Sensitive files
+*.env
+*.key
+*.pem
+*.log

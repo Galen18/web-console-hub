@@ -21,7 +21,7 @@ const gdriveManager = new GDriveManager();
 // Wire up push notifications
 sessionMonitor.onAlert((sessionId, type, message) => {
   const url = `/terminal/${sessionId}`;
-  pushManager.notify('Golden Tide Console', message, url);
+  pushManager.notify('Web Console Hub', message, url);
 });
 
 // Middleware
@@ -172,6 +172,6 @@ proxy.on('error', (err, req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`Golden Tide Console Hub running on port ${PORT}`);
+  console.log(`Web Console Hub Hub running on port ${PORT}`);
   sessionMonitor.start();
 });

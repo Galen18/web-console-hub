@@ -1,4 +1,4 @@
-# Golden Tide Console
+# Web Console Hub
 
 A mobile-friendly web dashboard for managing multiple AI CLI sessions (Claude, Gemini, etc.) from your phone or browser.
 
@@ -80,8 +80,8 @@ sudo curl -L "https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_
 ### 2. Clone and install
 
 ```bash
-git clone https://github.com/your-username/golden-tide-console.git
-cd golden-tide-console/console-hub
+git clone https://github.com/your-username/web-console-hub.git
+cd web-console-hub/console-hub
 npm install --omit=dev
 ```
 
@@ -127,7 +127,7 @@ Open `https://YOUR_DOMAIN/console/` in your browser.
 ## Project Structure
 
 ```
-golden-tide-console/
+web-console-hub/
 ├── console-hub/
 │   ├── server.js              # Express API + SSE + ttyd proxy
 │   ├── package.json           # Node.js dependencies
@@ -239,6 +239,10 @@ rclone config
 | ttyd binary not working | Check architecture (`uname -m`), download matching binary |
 | Session created but no terminal | Check `sudo tmux list-sessions` and `pgrep ttyd` |
 | Push notifications not working | Requires HTTPS. Check browser permissions. |
+
+## Documentation
+
+- **[Architecture & Lessons Learned](docs/architecture-and-lessons.md)** — Full design rationale, end-cloud data bridge analysis, design patterns, and 8+ pitfall records from v1.0 to v2.1.x
 
 ## License
 

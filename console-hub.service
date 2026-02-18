@@ -1,11 +1,11 @@
 [Unit]
-Description=Golden Tide Console Hub
+Description=Web Console Hub
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/home/YOUR_USER/golden-tide-console/console-hub
+WorkingDirectory=/home/YOUR_USER/web-console-hub/console-hub
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=5

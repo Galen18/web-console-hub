@@ -1,7 +1,7 @@
 services:
   nginx:
     image: nginx:alpine
-    container_name: golden-tide-nginx
+    container_name: web-console-nginx
     network_mode: host
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro

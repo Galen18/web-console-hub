@@ -1,7 +1,7 @@
-// Golden Tide Console — Service Worker for Push Notifications
+// Web Console Hub — Service Worker for Push Notifications
 
 self.addEventListener('push', function(event) {
-  var data = { title: 'Golden Tide Console', body: 'Notification', url: '/console/' };
+  var data = { title: 'Web Console Hub', body: 'Notification', url: '/console/' };
   try {
     data = event.data.json();
   } catch(e) {}
