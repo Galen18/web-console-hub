@@ -1,6 +1,6 @@
 # Web Console Hub — Architecture & Lessons Learned
 
-> Version: 2.1.2 | Last updated: 2026-02-19
+> Version: 2.1.2 + Agent Panel | Last updated: 2026-02-21
 > Audience: Future self, contributors, similar project builders
 
 ---
@@ -14,7 +14,7 @@
 5. [End-Cloud Data Bridge](#5-end-cloud-data-bridge)
 6. [Design Patterns](#6-design-patterns)
 7. [Lessons Learned](#7-lessons-learned)
-8. [Version History](#8-version-history)
+8. [Version History](#8-version-history) — includes Agent Panel + Deployment Safety
 9. [Next Steps](#9-next-steps)
 
 ---
@@ -584,6 +584,34 @@ Phase 4 delivery. Major mobile UX overhaul:
 | Security headers | CSP, HSTS, X-Frame-Options via Nginx |
 | ttyd bind localhost | ttyd binds 127.0.0.1 (was 0.0.0.0) |
 
+### Agent Panel — Phase 5 (2026-02-21)
+
+Independent Express app (port 3001) for background agent daemon monitoring.
+
+| Feature | Detail |
+|---------|--------|
+| Daemon status | systemd state, uptime, memory via `systemctl show` |
+| Pending reviews | Markdown rendering + decision point highlighting |
+| Watchlist tracker | Persons/trends/events with overdue detection |
+| Usage stats | Per-model cost breakdown, 7-day summary |
+| Manual scan | Trigger daemon scan with 10-min cooldown |
+| 5-view SPA | Dashboard, Reviews, Watchlist, Stats, Terminal link |
+
+### Deployment Safety (2026-02-21)
+
+**Incident**: Repo's desensitized `index.html` was SCP'd to production, overwriting the v2.0 Console Hub with a Phase 1 template.
+
+**Root cause**: Repo and production have same-named files with different content. Any `scp`/`git pull` can silently overwrite production.
+
+**Safeguards implemented**:
+
+| Safeguard | Detail |
+|-----------|--------|
+| Production git | `git init` in golden-tide/ and web-console-hub/ — enables `git checkout` rollback |
+| Daily backup cron | `tar.gz` at 03:00, 7-day retention |
+| Safe deployment rules | NEVER `git pull` on server; NEVER `scp` existing files; new files only via SCP |
+| Pre-deploy check | `ssh ls -la <target>` before any file transfer |
+
 ### v2.1.x — Stability (2026-02-17 ~ 02-19)
 
 | Version | Fix |
@@ -607,6 +635,6 @@ Phase 4 delivery. Major mobile UX overhaul:
 - [ ] Multiple CLI presets (different models, different system prompts)
 
 ### Long Term
-- [ ] Google SSO via oauth2-proxy (Phase 5)
+- [ ] Google SSO via oauth2-proxy
 - [ ] Session sharing (read-only link for collaboration)
 - [ ] Session export (conversation history as markdown)
