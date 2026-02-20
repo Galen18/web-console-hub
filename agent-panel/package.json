@@ -1,0 +1,13 @@
+{
+  "name": "agent-panel",
+  "version": "1.0.0",
+  "description": "Agent Dashboard — daemon status, pending reviews, watchlist, usage stats",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "marked": "^15.0.0"
+  }
+}

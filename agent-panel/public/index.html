@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Agent Panel</title>
+  <script src="marked.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 16px;
+      padding-bottom: 80px;
+    }
+    a { color: #60a5fa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #2a2a4a;
+      margin-bottom: 16px;
+    }
+    .header h1 { font-size: 20px; color: #d97706; font-weight: 600; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .auto-refresh { font-size: 12px; color: #666; }
+
+    /* Status cards */
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat-card {
+      background: #111127;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: #d97706; }
+    .stat-card .icon { font-size: 24px; margin-bottom: 4px; }
+    .stat-card .value { font-size: 22px; font-weight: 700; color: #fff; }
+    .stat-card .label { font-size: 12px; color: #888; margin-top: 2px; }
+    .stat-card.ok .value { color: #22c55e; }
+    .stat-card.warn .value { color: #eab308; }
+    .stat-card.error .value { color: #ef4444; }
+
+    /* Cards */
+    .card {
+      background: #111127;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+    .card-title { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+    .card-meta { font-size: 12px; color: #888; }
+
+    /* Section */
+    .section { margin-bottom: 16px; }
+    .section-title { font-size: 14px; color: #d97706; font-weight: 600; margin-bottom: 8px; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      min-height: 40px;
+      transition: background 0.2s;
+    }
+    .btn-primary { background: #d97706; color: #fff; }
+    .btn-primary:hover { background: #b45309; }
+    .btn-danger { background: #3b1818; color: #f87171; }
+    .btn-danger:hover { background: #501818; }
+    .btn-secondary { background: #1e3a5f; color: #60a5fa; }
+    .btn-secondary:hover { background: #1e4078; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; min-height: 28px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Tab bar */
+    .tab-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      background: #111127;
+      border-top: 1px solid #2a2a4a;
+      z-index: 100;
+    }
+    .tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0;
+      font-size: 10px;
+      color: #666;
+      cursor: pointer;
+      border: none;
+      background: none;
+      transition: color 0.2s;
+    }
+    .tab.active { color: #d97706; }
+    .tab:hover { color: #d97706; }
+    .tab .tab-icon { font-size: 20px; margin-bottom: 2px; }
+
+    /* Views */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* Pending review items */
+    .review-item {
+      background: #111127;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .review-header {
+      padding: 12px 16px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .review-header:hover { background: #161635; }
+    .review-title { font-weight: 500; font-size: 14px; }
+    .review-badges { display: flex; gap: 6px; align-items: center; }
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+    .badge-decision { background: #3b1818; color: #f87171; }
+    .badge-source { background: #1e3a5f; color: #60a5fa; }
+    .review-body {
+      display: none;
+      padding: 0 16px 16px;
+      border-top: 1px solid #2a2a4a;
+    }
+    .review-body.open { display: block; }
+    .review-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding: 8px 16px;
+      border-top: 1px solid #1a1a3a;
+    }
+
+    /* Markdown content */
+    .md-content { line-height: 1.7; font-size: 14px; }
+    .md-content h1 { font-size: 18px; color: #d97706; margin: 16px 0 8px; }
+    .md-content h2 { font-size: 16px; color: #d97706; margin: 14px 0 6px; border-bottom: 1px solid #2a2a4a; padding-bottom: 4px; }
+    .md-content h3 { font-size: 14px; color: #e0e0e0; margin: 12px 0 4px; }
+    .md-content p { margin: 8px 0; }
+    .md-content ul, .md-content ol { padding-left: 20px; margin: 8px 0; }
+    .md-content li { margin: 4px 0; }
+    .md-content table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+    .md-content th { background: #1e3a5f; color: #60a5fa; padding: 8px; text-align: left; font-weight: 600; }
+    .md-content td { padding: 8px; border-bottom: 1px solid #2a2a4a; }
+    .md-content tr:hover td { background: #161635; }
+    .md-content code { background: #1a1a3a; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+    .md-content pre { background: #0d0d1a; padding: 12px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
+    .md-content pre code { background: none; padding: 0; }
+    .md-content blockquote { border-left: 3px solid #d97706; padding-left: 12px; color: #999; margin: 8px 0; }
+    .md-content a { color: #60a5fa; }
+    /* Decision point highlight */
+    .md-content h2:has(+ *), .md-content h3:has(+ *) { }
+    .decision-highlight { border-left: 3px solid #ef4444; padding-left: 12px; background: #1a0a0a; border-radius: 0 8px 8px 0; margin: 10px 0; padding: 12px; }
+
+    /* Watchlist table */
+    .wl-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .wl-table th { background: #1e3a5f; color: #60a5fa; padding: 8px 6px; text-align: left; font-weight: 600; font-size: 12px; position: sticky; top: 0; }
+    .wl-table td { padding: 8px 6px; border-bottom: 1px solid #1a1a3a; }
+    .wl-table tr:hover td { background: #161635; }
+    .wl-table .overdue { color: #f87171; font-weight: 600; }
+    .wl-table .ok { color: #22c55e; }
+    .wl-table .never { color: #888; font-style: italic; }
+
+    /* Watchlist sub-tabs */
+    .sub-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+    .sub-tab {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      background: #1a1a3a;
+      color: #888;
+      border: none;
+      transition: all 0.2s;
+    }
+    .sub-tab.active { background: #d97706; color: #fff; }
+
+    /* Stats */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #1a1a3a;
+      font-size: 14px;
+    }
+    .stat-label { color: #888; }
+    .stat-value { color: #fff; font-weight: 600; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+    .history-table th { background: #1e3a5f; color: #60a5fa; padding: 6px; text-align: left; font-weight: 600; position: sticky; top: 0; }
+    .history-table td { padding: 6px; border-bottom: 1px solid #1a1a3a; }
+
+    /* Daemon control */
+    .daemon-status {
+      background: #111127;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .daemon-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+    .daemon-label { color: #888; }
+    .daemon-value { color: #fff; }
+
+    /* Focus list */
+    .focus-item {
+      padding: 10px 14px;
+      background: #111127;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .focus-item.urgent { border-left: 3px solid #ef4444; }
+    .focus-item.question { border-left: 3px solid #eab308; }
+    .focus-item.info { border-left: 3px solid #60a5fa; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: #666; }
+    .error-msg { color: #ef4444; text-align: center; padding: 20px; }
+
+    /* Scroll container for tables */
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 40px 20px; color: #666; }
+    .empty .icon { font-size: 48px; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Agent Panel</h1>
+    <div class="header-actions">
+      <span class="auto-refresh" id="refresh-indicator"></span>
+      <a href="/console/" class="btn btn-sm btn-secondary" title="Terminal">&#128421;</a>
+    </div>
+  </div>
+
+  <!-- View: Dashboard -->
+  <div id="view-dashboard" class="view active">
+    <div class="status-grid" id="status-cards">
+      <div class="stat-card" onclick="switchView('stats')">
+        <div class="icon">&#9898;</div>
+        <div class="value" id="card-daemon">...</div>
+        <div class="label">Daemon</div>
+      </div>
+      <div class="stat-card" onclick="switchView('reviews')">
+        <div class="icon">&#128203;</div>
+        <div class="value" id="card-pending">...</div>
+        <div class="label">Pending</div>
+      </div>
+      <div class="stat-card" onclick="switchView('watchlist')">
+        <div class="icon">&#9888;&#65039;</div>
+        <div class="value" id="card-overdue">...</div>
+        <div class="label">Overdue</div>
+      </div>
+      <div class="stat-card" onclick="switchView('stats')">
+        <div class="icon">&#128176;</div>
+        <div class="value" id="card-cost">...</div>
+        <div class="label">7d Cost</div>
+      </div>
+    </div>
+
+    <div class="section" id="focus-section">
+      <div class="section-title">&#128308; Focus</div>
+      <div id="focus-list"><div class="loading">Loading...</div></div>
+    </div>
+
+    <div class="section" id="recent-reviews-section">
+      <div class="section-title">&#128204; Latest Reviews</div>
+      <div id="recent-reviews"><div class="loading">Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- View: Pending Reviews -->
+  <div id="view-reviews" class="view">
+    <div class="section-title" style="margin-bottom:12px">&#128203; Pending Reviews</div>
+    <div id="reviews-list"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- View: Watchlist -->
+  <div id="view-watchlist" class="view">
+    <div class="section-title" style="margin-bottom:12px">&#128065; Watchlist</div>
+    <div class="sub-tabs" id="wl-tabs">
+      <button class="sub-tab active" onclick="switchWlTab('persons')">Persons</button>
+      <button class="sub-tab" onclick="switchWlTab('trends')">Trends</button>
+      <button class="sub-tab" onclick="switchWlTab('events')">Events</button>
+    </div>
+    <div id="wl-content"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- View: Stats + Daemon -->
+  <div id="view-stats" class="view">
+    <div class="section-title" style="margin-bottom:12px">&#128202; Stats &amp; Daemon</div>
+    <div id="daemon-panel"><div class="loading">Loading...</div></div>
+    <div id="usage-panel" style="margin-top:16px"><div class="loading">Loading...</div></div>
+    <div id="config-panel" style="margin-top:16px"></div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchView('dashboard')" id="tab-dashboard">
+      <span class="tab-icon">&#127968;</span>Dashboard
+    </button>
+    <button class="tab" onclick="switchView('reviews')" id="tab-reviews">
+      <span class="tab-icon">&#128203;</span>Reviews
+    </button>
+    <button class="tab" onclick="switchView('watchlist')" id="tab-watchlist">
+      <span class="tab-icon">&#128065;</span>Watch
+    </button>
+    <button class="tab" onclick="switchView('stats')" id="tab-stats">
+      <span class="tab-icon">&#128202;</span>Stats
+    </button>
+    <button class="tab" onclick="goTerminal()" id="tab-terminal">
+      <span class="tab-icon">&#128421;</span>Terminal
+    </button>
+  </div>
+
+  <script>
+    var BASE = '/agent';
+    var currentView = 'dashboard';
+    var currentWlTab = 'persons';
+    var refreshTimer = null;
+    var cachedData = {};
+
+    // --- API helper ---
+    function api(path) {
+      return fetch(BASE + path).then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      });
+    }
+    function apiPost(path) {
+      return fetch(BASE + path, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        .then(function(r) { return r.json(); });
+    }
+
+    // --- View switching ---
+    function switchView(view) {
+      currentView = view;
+      document.querySelectorAll('.view').forEach(function(el) { el.classList.remove('active'); });
+      document.querySelectorAll('.tab').forEach(function(el) { el.classList.remove('active'); });
+      document.getElementById('view-' + view).classList.add('active');
+      document.getElementById('tab-' + view).classList.add('active');
+
+      if (view === 'reviews') loadReviews();
+      if (view === 'watchlist') loadWatchlist();
+      if (view === 'stats') { loadDaemon(); loadUsage(); loadConfig(); }
+    }
+
+    function goTerminal() { window.location.href = '/console/'; }
+
+    // --- Dashboard ---
+    function loadDashboard() {
+      api('/api/status').then(function(d) {
+        cachedData.status = d;
+        // Daemon card
+        var daemonEl = document.getElementById('card-daemon');
+        if (!d.data_reachable) {
+          daemonEl.textContent = 'N/A';
+          daemonEl.parentElement.className = 'stat-card error';
+        } else {
+          daemonEl.textContent = '...';
+          // Load daemon status separately for live info
+          api('/api/daemon').then(function(dm) {
+            daemonEl.textContent = dm.active ? 'Running' : 'Down';
+            daemonEl.parentElement.className = 'stat-card ' + (dm.active ? 'ok' : 'error');
+          }).catch(function() {
+            daemonEl.textContent = '?';
+          });
+        }
+
+        // Pending card
+        var pendingEl = document.getElementById('card-pending');
+        pendingEl.textContent = d.pending.count;
+        pendingEl.parentElement.className = 'stat-card' + (d.pending.count > 0 ? ' warn' : '');
+
+        // Overdue card
+        var overdueEl = document.getElementById('card-overdue');
+        overdueEl.textContent = d.watchlist.overdue_count;
+        overdueEl.parentElement.className = 'stat-card' + (d.watchlist.overdue_count > 5 ? ' error' : d.watchlist.overdue_count > 0 ? ' warn' : ' ok');
+
+        // Cost card
+        var costEl = document.getElementById('card-cost');
+        var wc = d.usage.week_cost;
+        costEl.textContent = wc !== undefined ? '$' + wc.toFixed(2) : 'N/A';
+
+        // Focus
+        renderFocus(d.cache);
+
+        // Recent reviews
+        renderRecentReviews(d.pending.items || []);
+
+        // Refresh indicator
+        document.getElementById('refresh-indicator').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      }).catch(function(e) {
+        document.getElementById('focus-list').innerHTML = '<div class="error-msg">Failed to load: ' + e.message + '</div>';
+      });
+    }
+
+    function renderFocus(cache) {
+      var el = document.getElementById('focus-list');
+      if (!cache || !cache.available) {
+        el.innerHTML = '<div class="empty">Cache unavailable</div>';
+        return;
+      }
+      if (!cache.focus || cache.focus.length === 0) {
+        el.innerHTML = '<div class="empty">No focus items</div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < cache.focus.length; i++) {
+        var item = cache.focus[i];
+        var cls = 'focus-item';
+        if (item.indexOf('\uD83D\uDD34') >= 0) cls += ' urgent';
+        else if (item.indexOf('\u2753') >= 0) cls += ' question';
+        else cls += ' info';
+        html += '<div class="' + cls + '">' + escapeHtml(item) + '</div>';
+      }
+      el.innerHTML = html;
+    }
+
+    function renderRecentReviews(items) {
+      var el = document.getElementById('recent-reviews');
+      if (!items || items.length === 0) {
+        el.innerHTML = '<div class="empty">No pending reviews</div>';
+        return;
+      }
+      var html = '';
+      for (var i = 0; i < Math.min(items.length, 3); i++) {
+        var r = items[i];
+        html += '<div class="card" onclick="switchView(\'reviews\')" style="cursor:pointer">';
+        html += '<div class="card-header"><div class="card-title">' + escapeHtml(r.title || r.filename) + '</div>';
+        html += '<div class="card-meta">';
+        if (r.decision_points) html += '<span class="badge badge-decision">' + r.decision_points + ' decisions</span>';
+        html += '</div></div></div>';
+      }
+      el.innerHTML = html;
+    }
+
+    // --- Reviews ---
+    function loadReviews() {
+      var el = document.getElementById('reviews-list');
+      el.innerHTML = '<div class="loading">Loading...</div>';
+      api('/api/pending').then(function(d) {
+        if (!d.available) { el.innerHTML = '<div class="error-msg">Data source unavailable</div>'; return; }
+        if (!d.items || d.items.length === 0) { el.innerHTML = '<div class="empty"><div class="icon">&#9989;</div>All reviewed</div>'; return; }
+        var html = '';
+        for (var i = 0; i < d.items.length; i++) {
+          var r = d.items[i];
+          html += '<div class="review-item" id="review-' + i + '">';
+          html += '<div class="review-header" onclick="toggleReview(' + i + ',\'' + escapeAttr(r.filename) + '\')">';
+          html += '<div><div class="review-title">' + escapeHtml(r.title || r.filename) + '</div>';
+          html += '<div style="font-size:12px;color:#888;margin-top:2px">' + escapeHtml(r.created || '') + '</div></div>';
+          html += '<div class="review-badges">';
+          if (r.decision_points) html += '<span class="badge badge-decision">\uD83D\uDD34 ' + r.decision_points + '</span>';
+          if (r.source) html += '<span class="badge badge-source">' + escapeHtml(r.source) + '</span>';
+          html += '</div></div>';
+          html += '<div class="review-body" id="review-body-' + i + '"><div class="loading">Loading...</div></div>';
+          html += '<div class="review-actions">';
+          html += '<button class="btn btn-sm btn-danger" onclick="dismissReview(\'' + escapeAttr(r.filename) + '\',' + i + ')">Dismiss</button>';
+          html += '</div></div>';
+        }
+        el.innerHTML = html;
+      });
+    }
+
+    function toggleReview(idx, filename) {
+      var body = document.getElementById('review-body-' + idx);
+      if (body.classList.contains('open')) {
+        body.classList.remove('open');
+        return;
+      }
+      body.classList.add('open');
+      if (body.dataset.loaded) return;
+      api('/api/pending/' + encodeURIComponent(filename)).then(function(d) {
+        var html = renderMarkdown(d.body);
+        body.innerHTML = '<div class="md-content">' + html + '</div>';
+        body.dataset.loaded = 'true';
+        highlightDecisions(body);
+      }).catch(function(e) {
+        body.innerHTML = '<div class="error-msg">Failed to load</div>';
+      });
+    }
+
+    function dismissReview(filename, idx) {
+      if (!confirm('Mark as reviewed?')) return;
+      apiPost('/api/pending/' + encodeURIComponent(filename) + '/dismiss').then(function(d) {
+        if (d.success) {
+          var item = document.getElementById('review-' + idx);
+          if (item) item.style.display = 'none';
+          loadDashboard();
+        }
+      });
+    }
+
+    function highlightDecisions(container) {
+      // Wrap decision point sections
+      var headings = container.querySelectorAll('h2, h3');
+      for (var i = 0; i < headings.length; i++) {
+        if (headings[i].textContent.indexOf('\uD83D\uDD34') >= 0 || headings[i].textContent.toLowerCase().indexOf('decision') >= 0 || headings[i].textContent.indexOf('決策') >= 0) {
+          var wrapper = document.createElement('div');
+          wrapper.className = 'decision-highlight';
+          var next = headings[i].nextElementSibling;
+          headings[i].parentNode.insertBefore(wrapper, headings[i]);
+          wrapper.appendChild(headings[i]);
+          while (next && next.tagName !== 'H2' && next.tagName !== 'H3' && next.tagName !== 'HR') {
+            var moveNext = next.nextElementSibling;
+            wrapper.appendChild(next);
+            next = moveNext;
+          }
+        }
+      }
+    }
+
+    // --- Watchlist ---
+    function loadWatchlist() {
+      var el = document.getElementById('wl-content');
+      el.innerHTML = '<div class="loading">Loading...</div>';
+      api('/api/watchlist').then(function(d) {
+        cachedData.watchlist = d;
+        renderWlTab(currentWlTab);
+      }).catch(function(e) {
+        el.innerHTML = '<div class="error-msg">Failed to load</div>';
+      });
+    }
+
+    function switchWlTab(tab) {
+      currentWlTab = tab;
+      document.querySelectorAll('#wl-tabs .sub-tab').forEach(function(el) { el.classList.remove('active'); });
+      event.target.classList.add('active');
+      renderWlTab(tab);
+    }
+
+    function renderWlTab(tab) {
+      var d = cachedData.watchlist;
+      var el = document.getElementById('wl-content');
+      if (!d || !d.available) { el.innerHTML = '<div class="error-msg">Data unavailable</div>'; return; }
+
+      if (tab === 'persons') {
+        var items = (d.persons || []).slice().sort(function(a, b) { return (b.overdue ? 1 : 0) - (a.overdue ? 1 : 0) || (a.days_since === null ? 999 : a.days_since) - (b.days_since === null ? 999 : b.days_since); });
+        // Sort: overdue first (never-checked at top), then by days since
+        items.sort(function(a, b) {
+          if (a.overdue !== b.overdue) return b.overdue ? 1 : -1;
+          if (a.last_check === null && b.last_check !== null) return -1;
+          if (b.last_check === null && a.last_check !== null) return 1;
+          return (b.days_since || 0) - (a.days_since || 0);
+        });
+        var html = '<div class="table-scroll"><table class="wl-table"><thead><tr><th>ID</th><th>Name</th><th>Focus</th><th>Days</th></tr></thead><tbody>';
+        for (var i = 0; i < items.length; i++) {
+          var p = items[i];
+          var cls = p.last_check === null ? 'never' : (p.overdue ? 'overdue' : 'ok');
+          var days = p.last_check === null ? 'never' : p.days_since + 'd';
+          html += '<tr><td>' + escapeHtml(p.id) + '</td><td>' + escapeHtml(p.name) + '<br><span style="font-size:11px;color:#666">' + escapeHtml(p.role) + '</span></td><td style="font-size:12px">' + escapeHtml(p.focus) + '</td><td class="' + cls + '">' + days + '<br><span style="font-size:11px;color:#666">' + p.threshold + 'd</span></td></tr>';
+        }
+        html += '</tbody></table></div>';
+        el.innerHTML = html;
+      } else if (tab === 'trends') {
+        var items = (d.trends || []).slice();
+        items.sort(function(a, b) {
+          if (a.overdue !== b.overdue) return b.overdue ? 1 : -1;
+          if (a.last_check === null && b.last_check !== null) return -1;
+          if (b.last_check === null && a.last_check !== null) return 1;
+          return (b.days_since || 0) - (a.days_since || 0);
+        });
+        var html = '<div class="table-scroll"><table class="wl-table"><thead><tr><th>ID</th><th>Topic</th><th>Keywords</th><th>Days</th></tr></thead><tbody>';
+        for (var i = 0; i < items.length; i++) {
+          var t = items[i];
+          var cls = t.last_check === null ? 'never' : (t.overdue ? 'overdue' : 'ok');
+          var days = t.last_check === null ? 'never' : t.days_since + 'd';
+          html += '<tr><td>' + escapeHtml(t.id) + '</td><td>' + escapeHtml(t.topic) + '</td><td style="font-size:12px">' + escapeHtml(t.keywords) + '</td><td class="' + cls + '">' + days + '<br><span style="font-size:11px;color:#666">' + t.threshold + 'd</span></td></tr>';
+        }
+        html += '</tbody></table></div>';
+        el.innerHTML = html;
+      } else if (tab === 'events') {
+        var items = (d.events || []).slice().sort(function(a, b) { return a.days_until - b.days_until; });
+        var html = '<div class="table-scroll"><table class="wl-table"><thead><tr><th>Date</th><th>Event</th><th>Relevance</th><th>Days</th></tr></thead><tbody>';
+        for (var i = 0; i < items.length; i++) {
+          var ev = items[i];
+          var cls = ev.days_until < 0 ? 'overdue' : (ev.days_until <= 7 ? 'overdue' : 'ok');
+          html += '<tr><td>' + escapeHtml(ev.date) + '</td><td>' + escapeHtml(ev.name) + '</td><td style="font-size:12px">' + escapeHtml(ev.relevance) + '</td><td class="' + cls + '">' + (ev.days_until >= 0 ? ev.days_until + 'd' : 'past') + '</td></tr>';
+        }
+        html += '</tbody></table></div>';
+        el.innerHTML = html;
+      }
+    }
+
+    // --- Stats + Daemon ---
+    function loadDaemon() {
+      var el = document.getElementById('daemon-panel');
+      api('/api/daemon').then(function(d) {
+        cachedData.daemon = d;
+        var stateColor = d.active ? '#22c55e' : '#ef4444';
+        var html = '<div class="daemon-status">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:16px;font-weight:600">Daemon</span><span style="color:' + stateColor + ';font-weight:600">' + (d.active ? '&#9679; Running' : '&#9679; Down') + '</span></div>';
+        html += '<div class="daemon-row"><span class="daemon-label">State</span><span class="daemon-value">' + escapeHtml(d.state || '?') + ' / ' + escapeHtml(d.sub_state || '?') + '</span></div>';
+        html += '<div class="daemon-row"><span class="daemon-label">Uptime</span><span class="daemon-value">' + escapeHtml(d.uptime_human || 'N/A') + '</span></div>';
+        html += '<div class="daemon-row"><span class="daemon-label">Memory</span><span class="daemon-value">' + (d.memory_mb !== null ? d.memory_mb + ' MB' : 'N/A') + '</span></div>';
+        html += '<div class="daemon-row"><span class="daemon-label">PID</span><span class="daemon-value">' + (d.pid || 'N/A') + '</span></div>';
+        html += '<div style="margin-top:12px"><button class="btn btn-primary" style="width:100%" onclick="triggerScan()" id="scan-btn">Trigger Scan</button></div>';
+        html += '</div>';
+        el.innerHTML = html;
+      }).catch(function(e) {
+        el.innerHTML = '<div class="daemon-status"><div class="error-msg">Cannot reach daemon: ' + e.message + '</div></div>';
+      });
+    }
+
+    function triggerScan() {
+      var btn = document.getElementById('scan-btn');
+      if (!confirm('Trigger a manual daemon scan?')) return;
+      btn.disabled = true;
+      btn.textContent = 'Scanning...';
+      apiPost('/api/daemon/scan').then(function(d) {
+        if (d.cooldown) {
+          alert('Cooldown active. Wait ' + d.remaining_seconds + 's');
+        } else if (d.success) {
+          alert('Scan complete');
+          loadDashboard();
+        } else {
+          alert('Scan failed: ' + (d.error || 'unknown'));
+        }
+        btn.disabled = false;
+        btn.textContent = 'Trigger Scan';
+      }).catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Trigger Scan';
+      });
+    }
+
+    function loadUsage() {
+      var el = document.getElementById('usage-panel');
+      api('/api/usage').then(function(d) {
+        if (!d.available) { el.innerHTML = '<div class="card" style="padding:16px"><div class="empty">No usage data yet</div></div>'; return; }
+        var s = d.summary || {};
+        var html = '<div class="card" style="padding:16px">';
+        html += '<div style="font-size:16px;font-weight:600;margin-bottom:12px">Usage Stats</div>';
+        html += '<div class="stat-row"><span class="stat-label">Total Cost</span><span class="stat-value">$' + (s.total_cost || 0).toFixed(4) + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Total Calls</span><span class="stat-value">' + (s.total_calls || 0) + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Avg Cost/Call</span><span class="stat-value">$' + (s.avg_cost || 0).toFixed(4) + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">7d Cost</span><span class="stat-value">$' + (s.week_cost || 0).toFixed(4) + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">7d Calls</span><span class="stat-value">' + (s.week_calls || 0) + '</span></div>';
+
+        // By model
+        if (d.by_model && Object.keys(d.by_model).length > 0) {
+          html += '<div style="margin-top:16px;font-size:14px;font-weight:600;margin-bottom:8px">By Model</div>';
+          for (var m in d.by_model) {
+            html += '<div class="stat-row"><span class="stat-label">' + escapeHtml(m) + '</span><span class="stat-value">' + d.by_model[m].calls + ' calls / $' + d.by_model[m].cost.toFixed(4) + '</span></div>';
+          }
+        }
+
+        // History table
+        if (d.rows && d.rows.length > 0) {
+          html += '<div style="margin-top:16px;font-size:14px;font-weight:600;margin-bottom:8px">Recent Calls</div>';
+          html += '<div class="table-scroll"><table class="history-table"><thead><tr><th>Time</th><th>Task</th><th>Model</th><th>Cost</th><th>Turns</th></tr></thead><tbody>';
+          for (var i = 0; i < Math.min(d.rows.length, 20); i++) {
+            var r = d.rows[i];
+            html += '<tr><td>' + escapeHtml(r.timestamp || '') + '</td><td>' + escapeHtml(r.task_type || '') + '</td><td>' + escapeHtml(r.model || '') + '</td><td>$' + (parseFloat(r.cost_usd) || 0).toFixed(4) + '</td><td>' + escapeHtml(r.turns || '') + '</td></tr>';
+          }
+          html += '</tbody></table></div>';
+        }
+
+        html += '</div>';
+        el.innerHTML = html;
+      });
+    }
+
+    function loadConfig() {
+      var el = document.getElementById('config-panel');
+      api('/api/config').then(function(d) {
+        if (!d.available) { el.innerHTML = ''; return; }
+        var c = d.config;
+        var html = '<div class="card" style="padding:16px">';
+        html += '<div style="font-size:16px;font-weight:600;margin-bottom:12px">Daemon Config</div>';
+        html += '<div class="stat-row"><span class="stat-label">Interval</span><span class="stat-value">' + escapeHtml(c.heartbeat_interval_human || '?') + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Max Items/Cycle</span><span class="stat-value">' + (c.max_items_per_cycle || '?') + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Watchlist Model</span><span class="stat-value">' + escapeHtml(c.claude_model_watchlist || '?') + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Urgent Model</span><span class="stat-value">' + escapeHtml(c.claude_model_urgent || '?') + '</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Timeout</span><span class="stat-value">' + (c.claude_timeout_seconds || '?') + 's</span></div>';
+        html += '<div class="stat-row"><span class="stat-label">Allowed Tools</span><span class="stat-value" style="font-size:12px">' + escapeHtml(c.claude_allowed_tools || '?') + '</span></div>';
+        html += '</div>';
+        el.innerHTML = html;
+      }).catch(function() { el.innerHTML = ''; });
+    }
+
+    // --- Markdown rendering ---
+    function renderMarkdown(text) {
+      if (!text) return '';
+      try { return marked.parse(text); } catch(e) { return '<pre>' + escapeHtml(text) + '</pre>'; }
+    }
+
+    // --- Helpers ---
+    function escapeHtml(s) {
+      if (!s) return '';
+      var d = document.createElement('div');
+      d.textContent = String(s);
+      return d.innerHTML;
+    }
+    function escapeAttr(s) {
+      return String(s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    // --- Auto-refresh ---
+    function startRefresh() {
+      loadDashboard();
+      refreshTimer = setInterval(function() {
+        if (document.hidden) return;
+        if (currentView === 'dashboard') loadDashboard();
+      }, 60000);
+    }
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden && currentView === 'dashboard') loadDashboard();
+    });
+
+    // --- Init ---
+    startRefresh();
+  </script>
+</body>
+</html>

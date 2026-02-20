@@ -124,6 +124,26 @@ docker compose up -d
 
 Open `https://YOUR_DOMAIN/console/` in your browser.
 
+## Agent Panel
+
+Background agent daemon dashboard at `/agent/` (configurable). Independent Express app (port 3001).
+
+- Daemon status monitoring (systemd state, uptime, memory)
+- Pending review reader with Markdown rendering + decision point highlighting
+- Watchlist tracker (persons/trends/events with overdue detection)
+- Usage statistics and cost tracking (per-model breakdown)
+- Manual scan trigger with 10-minute cooldown
+
+### Deployment Warning
+
+> **This repo contains desensitized template files.**
+> Do NOT copy repo files directly to production — production files may differ significantly.
+
+To update production:
+1. For **new files** (like agent-panel/): SCP the directory, then adjust env defaults
+2. For **existing files**: Edit directly on the server, never overwrite with repo versions
+3. Search-replace `YOUR_USER`, `YOUR_DOMAIN`, path placeholders before deploying
+
 ## Project Structure
 
 ```
@@ -145,6 +165,16 @@ web-console-hub/
 │       ├── sessions.json
 │       ├── vapid-keys.json
 │       └── push-subscriptions.json
+├── agent-panel/
+│   ├── server.js              # Express API server (port 3001)
+│   ├── package.json
+│   ├── agent-panel.service    # systemd unit file (template)
+│   ├── app/
+│   │   ├── data-reader.js     # Data source reader (cache, pending, watchlist, usage)
+│   │   └── daemon-ctl.js      # systemd service control wrapper
+│   └── public/
+│       ├── index.html         # Dashboard SPA (5 views)
+│       └── marked.min.js      # Markdown renderer
 ├── nginx/
 │   ├── nginx.conf             # Nginx config template
 │   └── html/
