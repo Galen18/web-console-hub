@@ -272,7 +272,7 @@ rclone config
 
 ## Documentation
 
-- **[Architecture & Lessons Learned](docs/architecture-and-lessons.md)** — Full design rationale, end-cloud data bridge analysis, design patterns, and 8+ pitfall records from v1.0 to v2.1.x
+- **[Architecture Overview](docs/architecture-overview.md)** — Design rationale, end-cloud data bridge analysis, design patterns, version history including Agent Panel (Phase 5) and deployment safety records
 
 ## License
 

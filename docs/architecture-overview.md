@@ -1,4 +1,4 @@
-# Web Console Hub — Architecture & Lessons Learned
+# Web Console Hub — Architecture Overview
 
 > Version: 2.1.2 + Agent Panel | Last updated: 2026-02-21
 > Audience: Future self, contributors, similar project builders
@@ -13,9 +13,8 @@
 4. [Service Orchestration Logic](#4-service-orchestration-logic)
 5. [End-Cloud Data Bridge](#5-end-cloud-data-bridge)
 6. [Design Patterns](#6-design-patterns)
-7. [Lessons Learned](#7-lessons-learned)
-8. [Version History](#8-version-history) — includes Agent Panel + Deployment Safety
-9. [Next Steps](#9-next-steps)
+7. [Version History](#7-version-history) — includes Agent Panel + Deployment Safety
+8. [Next Steps](#8-next-steps)
 
 ---
 
@@ -460,94 +459,7 @@ Auto-fallback: Files > 5MB use chunked upload (5MB chunks)
 
 ---
 
-## 7. Lessons Learned
-
-### 7.1 Shell History Expansion Eats Passwords
-
-**Problem**: `openssl passwd -apr1 'MyP@ss!2024'` — the `!` in the password gets interpreted by bash as history expansion. The generated hash is for a wrong password.
-
-**Fix**: Use `htpasswd -cb` which handles escaping internally:
-```bash
-htpasswd -cb /path/.htpasswd username 'MyP@ss!2024'
-```
-
-**Rule**: Never put passwords with `!` in bash command-line strings. Use dedicated tools or single quotes with care.
-
-### 7.2 Reverse Proxy BASE Path Mismatch
-
-**Problem**: Frontend JavaScript uses `fetch('/api/sessions')` — but behind a reverse proxy at `/console/`, this resolves to the server root, not `/console/api/sessions`.
-
-**Fix**: Set `var BASE = '/console'` in all frontend files. Every fetch call uses `BASE + '/api/...'`.
-
-**Rule**: When deploying behind a reverse proxy with a path prefix, the frontend must be aware of its own base path.
-
-### 7.3 FUSE Mount Permission Denied
-
-**Problem**: `rclone mount` works as root but other users get "Permission denied".
-
-**Fix**: Two steps:
-1. Add `--allow-other` flag to rclone mount
-2. Uncomment `user_allow_other` in `/etc/fuse.conf`
-
-**Rule**: FUSE mounts are user-private by default. Cross-user access requires both flag and config.
-
-### 7.4 SSH Heredoc vs SCP for Complex Files
-
-**Problem**: Sending HTML/JS files via SSH heredoc (`cat <<'EOF' > file.html`) corrupts content — quote conflicts, escape sequences, and variable expansion despite single-quoted delimiter.
-
-**Fix**: Write the file locally, then `scp` it:
-```bash
-# Local: write file with Write tool
-# Then: scp file.html your-user@server:/path/
-```
-
-**Rule**: For files containing HTML, JS, or any mixed-quote content, always use `scp` instead of heredoc injection.
-
-### 7.5 ttyd Option Syntax
-
-**Problem**: `ttyd --reconnect 3 tmux attach` fails with `execvp failed: No such file or directory`. ttyd interprets `3` as the command to execute.
-
-**Fix**: `reconnect` is a frontend (xterm.js) option, not a CLI flag. Pass via `-t`:
-```bash
-ttyd -t reconnect=3 tmux attach -t $session
-```
-
-**Rule**: ttyd's `-t key=value` passes options to the xterm.js frontend. CLI flags and frontend options are different namespaces.
-
-### 7.6 Docker Bind Mount Hot Reload
-
-**Problem**: After editing `nginx.conf` on the host, `docker exec nginx nginx -s reload` doesn't pick up the changes. The container still serves the old config.
-
-**Fix**: `docker restart <nginx-container>`. The bind mount exposes the file, but nginx's in-memory config only refreshes on container restart (or a proper `nginx -s reload` that re-reads from the bind-mounted path — which may fail due to caching).
-
-**Rule**: For Docker bind mounts, prefer `docker restart` over in-container reload when changing configuration files.
-
-### 7.7 tmux resize-window Requires Target
-
-**Problem**: `tmux resize-pane -x 120 -y 40` resizes the wrong pane in a multi-session server.
-
-**Fix**: Use `resize-window` with explicit session target:
-```bash
-tmux resize-window -t "$sessionId" -x $cols -y $rows
-```
-
-**Rule**: In a multi-session tmux server, always specify `-t $session` to avoid affecting the wrong session.
-
-### 7.8 Mobile Virtual Keyboard and Layout
-
-**Problem**: On iOS Safari, the virtual keyboard pushes the page up via `visualViewport` changes, but `100vh` still refers to the full screen height — causing the input bar to be hidden behind the keyboard.
-
-**Fix**: Use `100dvh` (dynamic viewport height) with fallback:
-```css
-height: calc(100vh - 40px);     /* fallback */
-height: calc(100dvh - 40px);    /* modern browsers */
-```
-
-Plus `<meta name="viewport" content="interactive-widget=resizes-content">` to tell the browser that the keyboard should resize the content area, not overlay it.
-
----
-
-## 8. Version History
+## 7. Version History
 
 ### v1.0 — Core Platform (2026-02-12 ~ 02-13)
 
@@ -622,7 +534,7 @@ Independent Express app (port 3001) for background agent daemon monitoring.
 
 ---
 
-## 9. Next Steps
+## 8. Next Steps
 
 ### Short Term
 - [ ] Password strengthening (replace Basic Auth with session-based auth or OAuth2)
