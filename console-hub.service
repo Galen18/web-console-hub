@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
+User=YOUR_USER
 WorkingDirectory=/home/YOUR_USER/web-console-hub/console-hub
 ExecStart=/usr/bin/node server.js
 Restart=always
